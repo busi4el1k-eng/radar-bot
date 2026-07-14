@@ -5,15 +5,25 @@ românești și moldovenești. Fondatorii își trimit produsul printr-un formul
 pas cu pas, adminul aprobă sau respinge, iar la aprobare botul postează în
 canal imaginea produsului cu descrierea și linkul în caption.
 
+Pe lângă submisiile manuale, botul are un **agregator**: adună automat
+articole despre startup-uri din presa de profil (RSS/scraping politicos),
+le filtrează după relevanță (cuvinte-cheie + opțional AI), le deduplică și
+le pune într-un inbox pe care adminul îl răsfoiește în privat, alegând ce
+se publică. Nimic nu ajunge în canal automat.
+
 ## Structura proiectului
 
 ```
-main.py            # punctul de intrare (long polling)
-handlers.py        # formularul fondatorului (FSM) + moderarea adminului
-db.py              # PostgreSQL (Neon) prin asyncpg, cu reconectare
-texts.py           # toate mesajele, în română, într-un singur loc
-setup.py           # configurare interactivă a fișierului .env
-radar-bot.service  # unit systemd pentru deploy
+main.py             # punctul de intrare (long polling + pull automat la 6h)
+handlers.py         # formularul fondatorului (FSM) + moderarea adminului
+handlers_inbox.py   # comenzile agregatorului: /pull, /inbox, /inboxstats
+scraper.py          # pipeline-ul agregatorului: fetch → dedup → filtru → DB
+ai_filter.py        # scorul de relevanță + filtrul AI opțional (OpenAI)
+sources/            # un fișier per sursă (base.py = clasa comună + HTTP politicos)
+db.py               # PostgreSQL (Neon) prin asyncpg, cu reconectare
+texts.py            # toate mesajele, în română, într-un singur loc
+setup.py            # configurare interactivă a fișierului .env
+radar-bot.service   # unit systemd pentru deploy
 requirements.txt
 .env.example
 ```
@@ -44,9 +54,48 @@ Tabelul `submissions` se creează automat la prima pornire.
 | `/start` | fondator | mesaj de bun venit + buton de adăugare produs |
 | `/cancel` | oricine | anulează formularul/acțiunea curentă |
 | `/pending` | admin | listează submisiile aflate în moderare |
+| `/pull` | admin | rulează agregatorul acum, pe toate sursele |
+| `/inbox` | admin | răsfoiește itemele agregate, unul pe rând, cu butoane |
+| `/inboxstats` | admin | statistici pe surse și statusuri |
 
 Anti-spam: o singură submisie per fondator la 7 zile (submisiile respinse nu
 blochează — fondatorul poate corecta și retrimite).
+
+## Agregatorul
+
+- **Surse** (în `sources/`): The Recursive (RO), StartupCafe.ro, start-up.ro,
+  Startarium, EU-Startups (categoria România), Startup Moldova, NewsMaker.md,
+  Logos-Press, SeedBlink. RSS unde există, altfel parsare de listing.
+- **Politețe HTTP**: max 1 request/secundă per domeniu, robots.txt respectat,
+  timeout 15s. O sursă căzută e logată și raportată în sumarul /pull, fără să
+  oprească restul.
+- **Deduplicare**: pe URL normalizat (fără utm_*) + similaritate de titlu
+  (rapidfuzz ≥85%) pe ultimele 30 de zile; câștigă sursa cu prioritate mai
+  mare, celelalte URL-uri se atașează ca „surse suplimentare”.
+- **Pull automat** la fiecare `PULL_INTERVAL_HOURS` ore (APScheduler, același
+  proces). La iteme noi, adminii primesc o notificare. Publicarea e mereu
+  manuală, din /inbox.
+
+### Cum adaug o sursă nouă
+
+1. Creezi `sources/numesursa.py` cu o clasă care moștenește `RssSource`
+   (setezi `name`, `display_name`, `priority`, `feed_candidates` și opțional
+   `listing_url`/`listing_pattern` ca fallback) sau `Source` (implementezi
+   `fetch()` manual pentru site-uri fără feed).
+2. O adaugi în `ACTIVE_SOURCES` din `sources/__init__.py`. Gata.
+
+Dezactivarea unei surse = comentezi linia ei din `ACTIVE_SOURCES`.
+
+### Cum calibrez filtrul de relevanță
+
+Totul e în `ai_filter.py`: listele `POSITIVE_SIGNALS`/`NEGATIVE_SIGNALS`,
+ponderile și pragul `THRESHOLD` (default 1.0 — un semnal pozitiv net e
+suficient). Itemele respinse apar în log cu scorul lor
+(`Filtrat (scor ...)`) — urmărește logurile după câteva pull-uri și ajustează.
+Cu `USE_AI_FILTER=true`, itemele care trec pragul sunt verificate și de un
+model OpenAI (`AI_MODEL`, default gpt-4o-mini), care scrie și draftul
+descrierii în română; la erori API filtrul e fail-open (itemul intră în inbox
+cu draftul din og:description).
 
 ## Deploy pe DigitalOcean droplet (Ubuntu)
 

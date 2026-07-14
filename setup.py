@@ -58,6 +58,35 @@ def validate_admins(value: str):
     )
 
 
+def validate_bool(value: str):
+    folded = value.strip().lower()
+    if folded in ("da", "true", "yes", "1"):
+        return True, "true"
+    if folded in ("nu", "false", "no", "0"):
+        return True, "false"
+    return False, "Răspunde cu „da” sau „nu”."
+
+
+def validate_openai_key(value: str):
+    if re.fullmatch(r"sk-[A-Za-z0-9_-]{20,}", value):
+        return True, value
+    return False, (
+        "Cheia OpenAI începe cu sk-... — o găsești pe platform.openai.com → API keys."
+    )
+
+
+def validate_model(value: str):
+    if value.strip():
+        return True, value.strip()
+    return False, "Scrie numele modelului (ex: gpt-4o-mini)."
+
+
+def validate_hours(value: str):
+    if re.fullmatch(r"\d{1,2}", value) and 1 <= int(value) <= 24:
+        return True, value
+    return False, "Trebuie să fie un număr de ore între 1 și 24 (ex: 6)."
+
+
 def validate_database_url(value: str):
     if not value.startswith(("postgresql://", "postgres://")):
         return False, (
@@ -127,6 +156,41 @@ def main() -> None:
 
     values = {name: ask(name, explanation, validator, existing)
               for name, explanation, validator in STEPS}
+
+    # ── Agregatorul (opțional) ──
+    existing.setdefault("USE_AI_FILTER", "false")
+    values["USE_AI_FILTER"] = ask(
+        "USE_AI_FILTER",
+        "Filtrul AI al agregatorului (da/nu). Cu „da”, itemele agregate sunt\n"
+        "  clasificate de un model OpenAI ieftin, care scrie și draftul descrierii.",
+        validate_bool,
+        existing,
+    )
+    if values["USE_AI_FILTER"] == "true":
+        values["OPENAI_API_KEY"] = ask(
+            "OPENAI_API_KEY",
+            "Cheia API de la OpenAI (începe cu sk-...).\n"
+            "  O creezi pe platform.openai.com → API keys.",
+            validate_openai_key,
+            existing,
+        )
+        existing.setdefault("AI_MODEL", "gpt-4o-mini")
+        values["AI_MODEL"] = ask(
+            "AI_MODEL",
+            "Modelul OpenAI folosit (recomandat gpt-4o-mini — foarte ieftin).",
+            validate_model,
+            existing,
+        )
+    else:
+        values["OPENAI_API_KEY"] = existing.get("OPENAI_API_KEY", "")
+        values["AI_MODEL"] = existing.get("AI_MODEL", "gpt-4o-mini")
+    existing.setdefault("PULL_INTERVAL_HOURS", "6")
+    values["PULL_INTERVAL_HOURS"] = ask(
+        "PULL_INTERVAL_HOURS",
+        "La câte ore rulează automat agregatorul (recomandat: 6).",
+        validate_hours,
+        existing,
+    )
 
     ENV_PATH.write_text(
         "".join(f"{key}={value}\n" for key, value in values.items()),
