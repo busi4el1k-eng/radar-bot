@@ -44,8 +44,10 @@ CREATE TABLE IF NOT EXISTS scraped_items (
     relevance_score      REAL,
     status               TEXT        NOT NULL DEFAULT 'new',
     published_message_id BIGINT,
+    meta                 JSONB       NOT NULL DEFAULT '{}',
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE scraped_items ADD COLUMN IF NOT EXISTS meta JSONB NOT NULL DEFAULT '{}';
 """
 
 _RETRYABLE = (
@@ -203,6 +205,7 @@ async def insert_scraped_item(
     draft_description: str,
     image_url: str | None,
     relevance_score: float,
+    meta: str = "{}",
 ) -> int | None:
     """Inserează un item nou; None dacă URL-ul există deja."""
     return await _run(
@@ -210,8 +213,8 @@ async def insert_scraped_item(
         """
         INSERT INTO scraped_items
             (source, title, url, extra_urls, published_at, summary,
-             draft_description, image_url, relevance_score)
-        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9)
+             draft_description, image_url, relevance_score, meta)
+        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10::jsonb)
         ON CONFLICT (url) DO NOTHING
         RETURNING id
         """,
@@ -224,6 +227,7 @@ async def insert_scraped_item(
         draft_description,
         image_url,
         relevance_score,
+        meta,
     )
 
 

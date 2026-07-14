@@ -63,9 +63,15 @@ blochează — fondatorul poate corecta și retrimite).
 
 ## Agregatorul
 
-- **Surse** (în `sources/`): The Recursive (RO), StartupCafe.ro, start-up.ro,
-  Startarium, EU-Startups (categoria România), Startup Moldova, NewsMaker.md,
-  Logos-Press, SeedBlink. RSS unde există, altfel parsare de listing.
+- **Surse active** (în `sources/`): **GitHub Trending** (produse open-source:
+  descriere, limbaje cu procente, stele, imagine de social preview, README
+  pentru draftul AI) și **Product Hunt** (lansările zilei, RSS). Postarea are
+  format „sec”: titlu – esență, ce face, ce rezolvă, limbaje, ⭐ stele, link,
+  semnătura canalului (`POST_FOOTER` din .env).
+- **Surse de presă RO/MD** (The Recursive, StartupCafe.ro, start-up.ro,
+  Startarium, EU-Startups, Startup Moldova, NewsMaker.md, Logos-Press,
+  SeedBlink): păstrate în cod, dar dezactivate — decomentează-le în
+  `ACTIVE_SOURCES` dacă le vrei înapoi.
 - **Politețe HTTP**: max 1 request/secundă per domeniu, robots.txt respectat,
   timeout 15s. O sursă căzută e logată și raportată în sumarul /pull, fără să
   oprească restul.

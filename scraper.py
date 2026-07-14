@@ -15,7 +15,7 @@ from rapidfuzz import fuzz
 
 import ai_filter
 import db
-from sources import ACTIVE_SOURCES, SOURCE_PRIORITIES, HttpClient, RawItem
+from sources import ACTIVE_SOURCES, SOURCE_KINDS, SOURCE_PRIORITIES, HttpClient, RawItem
 from sources.base import strip_html
 
 logger = logging.getLogger(__name__)
@@ -182,7 +182,8 @@ async def _do_pull(http: HttpClient, report: PullReport, only: set[str] | None) 
 
     # 4. Filtrare relevanță → îmbogățire → (AI) → insert
     for item in survivors:
-        score = ai_filter.keyword_score(item.title, item.summary)
+        kind = SOURCE_KINDS.get(item.source, "news")
+        score = ai_filter.score_for(kind, item.title, item.summary)
         if score < ai_filter.THRESHOLD:
             report.filtered += 1
             logger.info(
@@ -194,12 +195,15 @@ async def _do_pull(http: HttpClient, report: PullReport, only: set[str] | None) 
             )
             continue
 
-        og_description = await _enrich(http, item)
+        # sursele "product" vin de regulă cu imagine și rezumat gata puse
+        og_description = ""
+        if not item.image_url or not item.summary:
+            og_description = await _enrich(http, item)
         base_text = item.summary or og_description
 
         draft = None
         if ai_filter.ai_enabled():
-            relevant, draft = await ai_filter.ai_evaluate(item.title, base_text)
+            relevant, draft = await ai_filter.ai_evaluate(item.title, base_text, kind)
             if not relevant:
                 report.filtered += 1
                 logger.info("Filtrat de AI: [%s] %s", item.source, item.title)
@@ -217,6 +221,7 @@ async def _do_pull(http: HttpClient, report: PullReport, only: set[str] | None) 
             draft_description=draft,
             image_url=item.image_url,
             relevance_score=score,
+            meta=json.dumps(item.meta),
         )
         if new_id is None:  # conflict pe URL (inserat între timp)
             report.duplicates += 1

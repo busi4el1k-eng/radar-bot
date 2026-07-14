@@ -185,21 +185,9 @@ INBOX_EMPTY = "Inboxul e gol. 🎉 Rulează /pull sau așteaptă următorul pull
 
 INBOX_HEADER = "📥 {count} iteme în inbox. Primul: 👇"
 
-INBOX_CARD = (
-    "📰 <b>{title}</b>\n"
-    "\n"
-    "{draft}\n"
-    "\n"
-    "🔗 {url}\n"
-    "📡 {source} • {date} • scor {score}"
-    "{extra}"
-)
-
-INBOX_NO_DRAFT = "(fără descriere — apasă ✏️ ca să scrii una)"
+INBOX_META_LINE = "📡 {source} • {date} • scor {score}"
 
 INBOX_NO_IMAGE_TAG = "🖼 <i>Fără imagine — atașează una înainte de publicare.</i>\n\n"
-
-INBOX_EXTRA_SOURCES = "\n➕ Surse suplimentare: {links}"
 
 BTN_INBOX_PUBLISH = "📤 Publică"
 BTN_INBOX_EDIT = "✏️ Editează descrierea"
@@ -226,11 +214,11 @@ INBOX_PUBLISHED_NO_LINK = "✅ Publicat în canal."
 INBOX_IGNORED = "🗑 Ignorat — nu-ți mai apare."
 
 INBOX_ASK_DESCRIPTION = (
-    "Trimite noua descriere pentru „{title}” (max 300 de caractere). "
-    "Sau /cancel ca să renunți."
+    "Trimite noua descriere pentru „{title}” (max 600 de caractere; "
+    "paragrafe separate prin linie goală). Sau /cancel ca să renunți."
 )
 
-INBOX_DESC_TOO_LONG = "Descrierea are {n} caractere, maximul e 300. Mai scurt. ✂️"
+INBOX_DESC_TOO_LONG = "Descrierea are {n} caractere, maximul e 600. Mai scurt. ✂️"
 
 INBOX_ASK_PHOTO = (
     "Trimite poza pe care o folosim pentru „{title}” (ca poză, nu ca fișier). "
@@ -244,13 +232,3 @@ INBOX_UPDATED = "Am actualizat. Uite cardul: 👇"
 INBOX_STATS_HEADER = "📊 <b>Statistici inbox</b>\n"
 
 INBOX_STATS_EMPTY = "Încă nu există iteme agregate. Rulează /pull."
-
-# Postarea în canal pentru iteme agregate
-POST_TEMPLATE_SCRAPED = (
-    "🚀 <b>{title}</b>\n"
-    "\n"
-    "{description}\n"
-    "\n"
-    "🔗 {link}\n"
-    "📰 Sursa: {source}"
-)

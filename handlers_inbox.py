@@ -4,6 +4,7 @@ item cu item (publică / editează / schimbă poza / ignoră / următorul)."""
 import html
 import json
 import logging
+import os
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -30,30 +31,60 @@ class InboxEdit(StatesGroup):
     photo = State()
 
 
+POST_FOOTER = os.getenv("POST_FOOTER", "").strip()
+
+
 def _source_name(slug: str) -> str:
     return SOURCE_NAMES.get(slug, slug)
 
 
-def _card_caption(item) -> str:
-    draft = item["draft_description"] or texts.INBOX_NO_DRAFT
-    date = item["published_at"].strftime("%d.%m.%Y") if item["published_at"] else "azi"
-    extra_urls = json.loads(item["extra_urls"] or "[]")
-    extra = (
-        texts.INBOX_EXTRA_SOURCES.format(
-            links=" • ".join(html.escape(u, quote=True) for u in extra_urls[:3])
+def _format_stars(stars: int) -> str:
+    if stars >= 1000:
+        formatted = f"{stars / 1000:.1f}".rstrip("0").rstrip(".")
+        return f"{formatted}k"
+    return str(stars)
+
+
+def build_post_caption(item, for_channel: bool = False) -> str:
+    """Postarea „sec”: titlu – esență, ce face, ce rezolvă, limbaje, stele,
+    link, semnătură. Folosită și pentru cardul din inbox (preview identic)."""
+    try:
+        meta = json.loads(item["meta"] or "{}")
+    except (KeyError, TypeError):
+        meta = {}
+    title = html.escape(item["title"])
+    draft = (item["draft_description"] or (item["summary"] or "")[:400]).strip()
+    blocks = [f"<b>{title}</b> – {html.escape(draft)}" if draft else f"<b>{title}</b>"]
+
+    languages = meta.get("languages") or {}
+    if languages:
+        # jsonb nu păstrează ordinea cheilor — sortăm descrescător la afișare
+        ordered = sorted(languages.items(), key=lambda kv: -kv[1])
+        blocks.append(
+            "Limbaje: "
+            + ", ".join(f"{html.escape(str(lang))} ({pct}%)" for lang, pct in ordered)
         )
-        if extra_urls
-        else ""
-    )
+    stars = meta.get("stars")
+    if stars:
+        blocks.append(f"⭐️ {_format_stars(int(stars))} stars")
+
+    blocks.append(html.escape(item["url"], quote=True))
+    if for_channel and POST_FOOTER:
+        blocks.append(html.escape(POST_FOOTER))
+    return "\n\n".join(blocks)[:1020]
+
+
+def _card_caption(item) -> str:
+    date = item["published_at"].strftime("%d.%m.%Y") if item["published_at"] else "azi"
+    score = f"{item['relevance_score']:.1f}" if item["relevance_score"] is not None else "-"
     no_image = "" if (item["photo_file_id"] or item["image_url"]) else texts.INBOX_NO_IMAGE_TAG
-    caption = no_image + texts.INBOX_CARD.format(
-        title=html.escape(item["title"]),
-        draft=html.escape(draft) if item["draft_description"] else draft,
-        url=html.escape(item["url"], quote=True),
-        source=html.escape(_source_name(item["source"])),
-        date=date,
-        score=f"{item['relevance_score']:.1f}" if item["relevance_score"] is not None else "-",
-        extra=extra,
+    caption = (
+        no_image
+        + build_post_caption(item)
+        + "\n\n"
+        + texts.INBOX_META_LINE.format(
+            source=html.escape(_source_name(item["source"])), date=date, score=score
+        )
     )
     return caption[:1020]
 
@@ -206,15 +237,9 @@ async def inbox_publish(callback: CallbackQuery, bot: Bot) -> None:
         await callback.answer(texts.INBOX_ALREADY_PROCESSED, show_alert=True)
         return
 
-    description = item["draft_description"] or (item["summary"] or "")[:300]
-    caption = texts.POST_TEMPLATE_SCRAPED.format(
-        title=html.escape(item["title"]),
-        description=html.escape(description),
-        link=html.escape(item["url"], quote=True),
-        source=html.escape(_source_name(item["source"])),
-    )
+    caption = build_post_caption(item, for_channel=True)
     try:
-        posted = await bot.send_photo(CHANNEL_ID, photo, caption=caption[:1020])
+        posted = await bot.send_photo(CHANNEL_ID, photo, caption=caption)
     except (TelegramForbiddenError, TelegramBadRequest) as exc:
         await db.set_scraped_status(item_id, "new")
         logger.error("Publicarea itemului #%d a eșuat: %s", item_id, exc)
@@ -261,7 +286,7 @@ async def inbox_edit_start(callback: CallbackQuery, state: FSMContext) -> None:
 @inbox_router.message(InboxEdit.description, F.text, ~F.text.startswith("/"))
 async def inbox_edit_save(message: Message, state: FSMContext, bot: Bot) -> None:
     text = message.text.strip()
-    if len(text) > 300:
+    if len(text) > 600:
         await message.answer(texts.INBOX_DESC_TOO_LONG.format(n=len(text)))
         return
     data = await state.get_data()

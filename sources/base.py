@@ -37,6 +37,7 @@ class RawItem:
     summary: str = ""
     image_url: str | None = None
     extra_urls: list[str] = field(default_factory=list)
+    meta: dict = field(default_factory=dict)  # ex: stars, languages, homepage
 
 
 class HttpClient:
@@ -105,6 +106,7 @@ class Source:
     name = "base"          # slug, salvat în DB
     display_name = "Base"  # numele afișat în postare („Sursa: ...”)
     priority = 99          # mai mic = câștigă la deduplicare
+    kind = "news"          # "news" (articole de presă) sau "product" (produsul în sine)
 
     MAX_ITEMS = 30
 
