@@ -132,18 +132,19 @@ Dacă relevant=true, "descriere" = o descriere în română de MAXIM 300 de cara
 fără clickbait, fără emoji, care spune ce face startupul și care e noutatea.
 Dacă relevant=false, "descriere" = null."""
 
-PRODUCT_PROMPT = """Ești redactorul unui canal Telegram care prezintă produse, unelte și startup-uri noi, în stil sec și informativ.
-Primești numele produsului, descrierea lui și un fragment din README/pagina lui. Răspunde DOAR cu un obiect JSON:
+PRODUCT_PROMPT = """Ești redactorul unui canal Telegram care prezintă STARTUP-URI noi, în stil sec și informativ.
+Primești numele startup-ului, descrierea lui și un fragment din pagina/README-ul lui. Răspunde DOAR cu un obiect JSON:
 {"relevant": true sau false, "descriere": "..." sau null}
 
-"relevant" este false dacă NU e un produs/unealtă/startup concret, adică dacă e: o listă sau colecție
-(awesome list), un tutorial, un curs, un roadmap de învățare, o culegere de exemple/exerciții/întrebări
-de interviu, o carte sau documentație. Altfel, true.
+"relevant" este true doar dacă e un STARTUP sau un PRODUS COMERCIAL concret — o companie/echipă care lansează
+un produs sau serviciu pentru utilizatori/clienți. Este false dacă e: o listă sau colecție (awesome list),
+un tutorial, un curs, un roadmap de învățare, o culegere de exemple/exerciții/întrebări de interviu, o carte,
+documentație, sau o simplă bibliotecă/unealtă de programare fără produs în spate.
 
 Dacă relevant=true, scrie "descriere" în ROMÂNĂ, cu EXACT această structură (paragrafe separate prin linie goală):
-1. Prima frază: esența produsului — ce este, fără a repeta numele (începe direct cu esența, ex: „alternativă self-hosted la Airtable, care transformă baza de date în...").
-2. Un paragraf: din ce constă și ce face concret (funcții principale, cu ce se integrează).
-3. Un paragraf care începe cu „— ”: ce problemă rezolvă și avantajul cheie.
+1. Prima frază: esența startup-ului — ce este, fără a repeta numele (începe direct cu esența, ex: „platformă care transformă documentele în...").
+2. Un paragraf: din ce constă și ce face concret produsul (funcții principale, cu ce se integrează).
+3. Un paragraf care începe cu „— ”: ce problemă rezolvă și pentru cine.
 
 Total maxim 550 de caractere. Ton sec, fără clickbait, fără emoji, fără superlative goale.
 Dacă relevant=false, "descriere" = null."""

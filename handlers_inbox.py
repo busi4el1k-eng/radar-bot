@@ -11,7 +11,13 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    LinkPreviewOptions,
+    Message,
+)
 
 import db
 import scraper
@@ -105,6 +111,14 @@ def _card_keyboard(item_id: int) -> InlineKeyboardMarkup:
     )
 
 
+def _link_preview(item) -> LinkPreviewOptions:
+    """Fără imagine proprie, postarea folosește preview-ul mare al linkului,
+    afișat deasupra textului — Telegram aduce singur imaginea produsului."""
+    return LinkPreviewOptions(
+        url=item["url"], prefer_large_media=True, show_above_text=True
+    )
+
+
 async def send_card(bot: Bot, chat_id: int, item) -> None:
     caption = _card_caption(item)
     keyboard = _card_keyboard(item["id"])
@@ -115,12 +129,12 @@ async def send_card(bot: Bot, chat_id: int, item) -> None:
             return
         except TelegramBadRequest as exc:
             logger.warning(
-                "Imaginea itemului #%d nu a putut fi trimisă (%s) — card fără poză.",
+                "Imaginea itemului #%d nu a putut fi trimisă (%s) — card cu preview de link.",
                 item["id"],
                 exc,
             )
     await bot.send_message(
-        chat_id, caption, reply_markup=keyboard, disable_web_page_preview=False
+        chat_id, caption, reply_markup=keyboard, link_preview_options=_link_preview(item)
     )
 
 
@@ -229,27 +243,32 @@ async def inbox_publish(callback: CallbackQuery, bot: Bot) -> None:
         await callback.answer(texts.INBOX_ALREADY_PROCESSED, show_alert=True)
         return
     photo = item["photo_file_id"] or item["image_url"]
-    if not photo:
-        await callback.answer(texts.INBOX_NO_IMAGE_ALERT, show_alert=True)
-        return
     claimed = await db.claim_scraped(item_id, "published")
     if claimed is None:
         await callback.answer(texts.INBOX_ALREADY_PROCESSED, show_alert=True)
         return
 
     caption = build_post_caption(item, for_channel=True)
+    posted = None
     try:
-        posted = await bot.send_photo(CHANNEL_ID, photo, caption=caption)
+        if photo:
+            try:
+                posted = await bot.send_photo(CHANNEL_ID, photo, caption=caption)
+            except TelegramBadRequest:
+                # imaginea de la sursă nu e acceptată → preview de link
+                if item["photo_file_id"]:
+                    raise
+        if posted is None:
+            posted = await bot.send_message(
+                CHANNEL_ID, caption, link_preview_options=_link_preview(item)
+            )
     except (TelegramForbiddenError, TelegramBadRequest) as exc:
         await db.set_scraped_status(item_id, "new")
         logger.error("Publicarea itemului #%d a eșuat: %s", item_id, exc)
         await callback.answer()
-        if item["photo_file_id"]:
-            await callback.message.reply(
-                texts.ADMIN_CHANNEL_ERROR.format(error=html.escape(str(exc)))
-            )
-        else:
-            await callback.message.reply(texts.INBOX_IMAGE_REJECTED)
+        await callback.message.reply(
+            texts.ADMIN_CHANNEL_ERROR.format(error=html.escape(str(exc)))
+        )
         return
 
     await db.set_scraped_status(item_id, "published", posted.message_id)

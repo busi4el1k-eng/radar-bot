@@ -12,6 +12,7 @@ Două tipuri de surse (atributul `kind`):
 """
 
 from .base import HttpClient, RawItem, RssSource, Source
+from .betalist import BetaList
 from .eustartups import EuStartups
 from .github_trending import GitHubTrending
 from .logospress import LogosPress
@@ -25,8 +26,9 @@ from .startupro import StartUpRo
 from .therecursive import TheRecursive
 
 ACTIVE_SOURCES: list[type[Source]] = [
-    GitHubTrending,
     ProductHunt,
+    BetaList,
+    # GitHubTrending,  # unelte open-source trending — dezactivat: nu-s mereu startap-uri
     # ── surse de presă RO/MD, dezactivate (stil newsletter) ──
     # TheRecursive,
     # StartupCafe,
@@ -42,6 +44,7 @@ ACTIVE_SOURCES: list[type[Source]] = [
 _ALL_SOURCES: list[type[Source]] = [
     GitHubTrending,
     ProductHunt,
+    BetaList,
     TheRecursive,
     StartupCafe,
     StartUpRo,

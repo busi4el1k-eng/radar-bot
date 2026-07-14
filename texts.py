@@ -187,7 +187,10 @@ INBOX_HEADER = "📥 {count} iteme în inbox. Primul: 👇"
 
 INBOX_META_LINE = "📡 {source} • {date} • scor {score}"
 
-INBOX_NO_IMAGE_TAG = "🖼 <i>Fără imagine — atașează una înainte de publicare.</i>\n\n"
+INBOX_NO_IMAGE_TAG = (
+    "🖼 <i>Fără imagine proprie — se publică cu preview-ul linkului "
+    "(sau atașează o poză cu 🖼).</i>\n\n"
+)
 
 BTN_INBOX_PUBLISH = "📤 Publică"
 BTN_INBOX_EDIT = "✏️ Editează descrierea"
@@ -196,16 +199,6 @@ BTN_INBOX_IGNORE = "🗑 Ignoră"
 BTN_INBOX_NEXT = "⏭ Următorul"
 
 INBOX_ALREADY_PROCESSED = "Itemul ăsta a fost deja procesat."
-
-INBOX_NO_IMAGE_ALERT = (
-    "Itemul nu are imagine. Apasă „🖼 Schimbă poza” și trimite una — "
-    "apoi poți publica."
-)
-
-INBOX_IMAGE_REJECTED = (
-    "⚠️ Telegram nu a acceptat imaginea de la sursă. "
-    "Atașează o poză manual cu „🖼 Schimbă poza” și publică din nou."
-)
 
 INBOX_PUBLISHED = "✅ Publicat în canal: {url}"
 
