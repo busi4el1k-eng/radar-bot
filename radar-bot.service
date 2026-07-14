@@ -1,0 +1,15 @@
+[Unit]
+Description=RADAR Telegram bot (submisii startup-uri RO/MD)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=radar
+WorkingDirectory=/opt/radar-bot
+ExecStart=/opt/radar-bot/.venv/bin/python main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
