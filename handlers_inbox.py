@@ -83,10 +83,8 @@ def build_post_caption(item, for_channel: bool = False) -> str:
 def _card_caption(item) -> str:
     date = item["published_at"].strftime("%d.%m.%Y") if item["published_at"] else "azi"
     score = f"{item['relevance_score']:.1f}" if item["relevance_score"] is not None else "-"
-    no_image = "" if (item["photo_file_id"] or item["image_url"]) else texts.INBOX_NO_IMAGE_TAG
     caption = (
-        no_image
-        + build_post_caption(item)
+        build_post_caption(item)
         + "\n\n"
         + texts.INBOX_META_LINE.format(
             source=html.escape(_source_name(item["source"])), date=date, score=score

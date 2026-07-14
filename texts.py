@@ -185,12 +185,7 @@ INBOX_EMPTY = "Inboxul e gol. 🎉 Rulează /pull sau așteaptă următorul pull
 
 INBOX_HEADER = "📥 {count} iteme în inbox. Primul: 👇"
 
-INBOX_META_LINE = "📡 {source} • {date} • scor {score}"
-
-INBOX_NO_IMAGE_TAG = (
-    "🖼 <i>Fără imagine proprie — se publică cu preview-ul linkului "
-    "(sau atașează o poză cu 🖼).</i>\n\n"
-)
+INBOX_META_LINE = "<i>{source} • {date} • scor {score}</i>"
 
 BTN_INBOX_PUBLISH = "📤 Publică"
 BTN_INBOX_EDIT = "✏️ Editează descrierea"
