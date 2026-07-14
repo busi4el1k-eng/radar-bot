@@ -12,6 +12,8 @@ load_dotenv()
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import db
@@ -56,6 +58,7 @@ async def main() -> None:
     scheduler.start()
     logger.info("Pull automat programat la fiecare %d ore.", interval_hours)
 
+    await setup_menu(bot)
     me = await bot.get_me()
     logger.info("Bot pornit: @%s — aștept mesaje (long polling).", me.username)
     try:
@@ -63,6 +66,36 @@ async def main() -> None:
     finally:
         scheduler.shutdown(wait=False)
         await db.close()
+
+
+USER_COMMANDS = [
+    BotCommand(command="start", description="🚀 Adaugă produsul tău"),
+    BotCommand(command="cancel", description="❌ Anulează formularul curent"),
+]
+
+ADMIN_COMMANDS = USER_COMMANDS + [
+    BotCommand(command="pending", description="🗂 Submisii în moderare"),
+    BotCommand(command="inbox", description="📥 Răsfoiește itemele agregate"),
+    BotCommand(command="pull", description="📡 Rulează agregatorul acum"),
+    BotCommand(command="inboxstats", description="📊 Statistici inbox"),
+]
+
+
+async def setup_menu(bot: Bot) -> None:
+    """Meniul de comenzi: unul simplu pentru toți, complet pentru admini."""
+    await bot.set_my_commands(USER_COMMANDS, scope=BotCommandScopeAllPrivateChats())
+    for admin_id in handlers.ADMIN_IDS:
+        try:
+            await bot.set_my_commands(
+                ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id)
+            )
+        except TelegramBadRequest as exc:
+            logger.warning(
+                "Nu am putut seta meniul pentru adminul %d: %s "
+                "(adminul trebuie să fi pornit o conversație cu botul)",
+                admin_id,
+                exc,
+            )
 
 
 async def scheduled_pull(bot: Bot) -> None:
